@@ -37,6 +37,28 @@ DASHBOARD_TEMPLATE = """
       --shadow: 0 14px 40px rgba(25, 35, 50, 0.08);
     }
 
+    .dark {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --ink: #e2e8f0;
+      --muted: #94a3b8;
+      --line: #334155;
+      --blue: #60a5fa;
+      --green: #34d399;
+      --amber: #fbbf24;
+      --red: #f87171;
+      --shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .dark .topbar { background: var(--panel); }
+    .dark .pill { background: #1a3a2a; color: #34d399; border-color: #2d5a40; }
+    .dark .tag { background: #263548; color: #cbd5e1; }
+    .dark .summary { color: #94a3b8; }
+    .dark .alert-box { background: #1a3a2a; border-color: #2d5a40; }
+    .dark .alert-box.error-box { background: #3a1a1a; border-color: #5a2d2d; }
+    .dark input { background: #0f172a; color: #e2e8f0; border-color: #475569; }
+    .dark .theme-toggle { color: #fbbf24; }
+
     * { box-sizing: border-box; }
 
     body {
@@ -56,7 +78,7 @@ DASHBOARD_TEMPLATE = """
       gap: 24px;
       align-items: center;
       padding: 28px clamp(18px, 4vw, 48px);
-      background: #ffffff;
+      background: var(--panel);
       border-bottom: 1px solid var(--line);
     }
 
@@ -201,6 +223,22 @@ DASHBOARD_TEMPLATE = """
 
     button:hover { filter: brightness(0.95); }
 
+    .theme-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+      min-width: 34px;
+      padding: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 18px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+    }
+
+    .theme-toggle:hover { background: var(--line); filter: none; }
+
     .status-grid {
       display: grid;
       gap: 10px;
@@ -320,6 +358,7 @@ DASHBOARD_TEMPLATE = """
       <h1>CISA Alerts</h1>
     </div>
     <span class="pill">Daily polling</span>
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">🌙</button>
   </header>
 
   <main>
@@ -433,6 +472,22 @@ DASHBOARD_TEMPLATE = """
       </aside>
     </div>
   </main>
+<script>
+(function() {
+  var key = "cisa-dark-mode";
+  var html = document.documentElement;
+  var btn = document.getElementById("theme-toggle");
+  function setDark(dark) {
+    html.classList.toggle("dark", dark);
+    btn.textContent = dark ? "☀️" : "🌙";
+    try { localStorage.setItem(key, dark ? "1" : "0"); } catch(e) {}
+  }
+  var saved;
+  try { saved = localStorage.getItem(key); } catch(e) {}
+  setDark(saved === null ? window.matchMedia("(prefers-color-scheme: dark)").matches : saved === "1");
+  btn.addEventListener("click", function() { setDark(!html.classList.contains("dark")); });
+})();
+</script>
 </body>
 </html>
 """
