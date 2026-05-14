@@ -1,0 +1,72 @@
+feeds:
+- name: CISA ICS Advisories
+  url: https://www.cisa.gov/ics-advisories.xml
+- name: CISA Cybersecurity Advisories All
+  url: https://www.cisa.gov/cybersecurity-advisories/all.xml
+kev_json_url: https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
+keywords:
+- ics
+- industrial control
+- industrial controller
+- operational technology
+- ot
+- iot
+- iiot
+- plc
+- programmable logic controller
+- scada
+- hmi
+- rtu
+- dcs
+- opc
+- opc ua
+- modbus
+- profinet
+- ethernet/ip
+- ethernet ip
+- dnp3
+- bacnet
+- siemens
+- simatic
+- s7
+- tia portal
+- wincc
+- rockwell
+- allen-bradley
+- allen bradley
+- controllogix
+- compactlogix
+- factorytalk
+- schneider
+- modicon
+- ecostruxure
+- abb
+- b&r
+- automation runtime
+- automation builder
+- ac500
+- 800xa
+- omron
+- mitsubishi
+- phoenix contact
+- wago
+- beckhoff
+- honeywell
+- yokogawa
+- emerson
+- ge
+- hitachi energy
+- johnson controls
+- building automation
+- bms
+- bas
+- ignition
+- inductive automation
+- kepware
+- koneksi
+- c-more
+exclude_keywords:
+- training
+- webinar
+- press release
+minimum_score: 1
