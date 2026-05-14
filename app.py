@@ -338,7 +338,7 @@ DASHBOARD_TEMPLATE = """
       </div>
       <div class="metric">
         <p class="label">Cron</p>
-        <p class="value">0 9 * * *</p>
+        <p class="value">0 13 * * *</p>
       </div>
     </section>
 

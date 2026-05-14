@@ -88,9 +88,9 @@ This project is deployed on Vercel (Hobby plan) and connected via GitHub for CI/
 | GitHub repo | `soeprbp/CISA_Alerts` |
 | Framework preset | Python (Flask) |
 | Python version | 3.12+ |
-| Cron schedule | `0 9 * * *` (daily 9 AM ET) |
+| Cron schedule | `0 13 * * *` (daily 1 PM UTC = 9 AM ET) |
 
-**Cron note:** The Hobby plan limits cron jobs to one execution per day. The schedule was changed from `0 * * * *` (hourly) to `0 9 * * *` (daily 9 AM) to comply with this limit. Upgrade to Pro for more frequent scheduling.
+**Cron note:** The Hobby plan limits cron jobs to one execution per day. Vercel cron runs in UTC — `0 13 * * *` is 9 AM ET during EDT (summer) and 8 AM ET during EST (winter). Upgrade to Pro for more frequent scheduling.
 
 **To set environment variables in Vercel:**
 ```bash
