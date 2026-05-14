@@ -50,7 +50,9 @@ This repo also exposes a Flask app for Vercel:
 - `GET /api/status` returns service/configuration status as JSON.
 - `GET` or `POST /api/run` runs one poll cycle and returns the number of new matching alerts.
 - `POST /run` runs one poll cycle from the dashboard.
-- `vercel.json` schedules `/api/run` hourly in production.
+- `vercel.json` schedules `/api/run` daily in production.
+
+**Production URL:** https://cisa-alerts.vercel.app
 
 Optional: set `CRON_SECRET` in Vercel. When it is set, `/api/run` requires either an
 `Authorization: Bearer <CRON_SECRET>` header or `?secret=<CRON_SECRET>`.
@@ -71,6 +73,28 @@ Zoom user OAuth token or Twilio SMS instead.
 
 On Vercel, the SQLite de-duplication database is written to `/tmp` because the
 deployed function filesystem is ephemeral.
+
+### Deployment setup
+
+This project is deployed on Vercel (Hobby plan) and connected via GitHub for CI/CD — any push to `main` triggers an automatic redeploy.
+
+| Detail | Value |
+|--------|-------|
+| Vercel project | `cisa-alerts` |
+| Team | `brent-soper-s-projects` |
+| GitHub repo | `soeprbp/CISA_Alerts` |
+| Framework preset | Python (Flask) |
+| Python version | 3.12+ |
+| Cron schedule | `0 9 * * *` (daily 9 AM ET) |
+
+**Cron note:** The Hobby plan limits cron jobs to one execution per day. The schedule was changed from `0 * * * *` (hourly) to `0 9 * * *` (daily 9 AM) to comply with this limit. Upgrade to Pro for more frequent scheduling.
+
+**To set environment variables in Vercel:**
+```bash
+vercel env add VAR_NAME
+```
+
+Or add them via the Vercel dashboard under Project Settings → Environment Variables.
 
 ## Suggested schedule
 
@@ -94,3 +118,15 @@ Good additions for industrial environments:
 - Omron, Mitsubishi, Phoenix Contact, WAGO, Beckhoff
 - ABB, Honeywell, Yokogawa, Emerson, GE, Hitachi Energy
 - Ignition, Kepware, OPC UA, Modbus, EtherNet/IP, Profinet, DNP3, BACnet
+
+## Tooling
+
+This project was set up and deployed using the following tools:
+
+| Tool | Purpose |
+|------|---------|
+| [opencode](https://opencode.ai) | AI coding assistant — executed Vercel CLI commands, edited config, committed and pushed changes |
+| [Vercel CLI](https://vercel.com/docs/cli) | Project linking, deployment, environment variable management, and deployment inspection |
+| GitHub | Source hosting and CI/CD trigger for automatic Vercel deployments |
+| Python 3.12+ | Runtime for the Flask application |
+| uv | Python package manager for dependency resolution |
