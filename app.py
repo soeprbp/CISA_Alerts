@@ -319,7 +319,7 @@ DASHBOARD_TEMPLATE = """
       <p class="eyebrow">Operational technology alerting</p>
       <h1>CISA Alerts</h1>
     </div>
-    <span class="pill">Hourly polling</span>
+    <span class="pill">Daily polling</span>
   </header>
 
   <main>
@@ -338,7 +338,7 @@ DASHBOARD_TEMPLATE = """
       </div>
       <div class="metric">
         <p class="label">Cron</p>
-        <p class="value">0 * * * *</p>
+        <p class="value">0 9 * * *</p>
       </div>
     </section>
 

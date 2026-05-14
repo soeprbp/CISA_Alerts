@@ -17,9 +17,11 @@ This is a small Python alerting service that watches CISA sources and sends aler
 - Sends alerts to:
   - console
   - Microsoft Teams webhook
-  - email via SMTP
-  - SMS via Zoom Phone or Twilio
   - Slack webhook
+  - Telegram bot
+  - email via SMTP
+  - Twilio SMS
+  - Zoom Phone SMS
 
 ## Install
 
@@ -60,18 +62,17 @@ Optional: set `CRON_SECRET` in Vercel. When it is set, `/api/run` requires eithe
 Delivery channels are configured with environment variables:
 
 - Teams: `TEAMS_WEBHOOK_URL`
-- SMTP: `SMTP_HOST`, `SMTP_TO`, and optional SMTP auth settings
-- Zoom SMS: `ZOOM_SMS_ACCOUNT_ID`, `ZOOM_SMS_CLIENT_ID`, `ZOOM_SMS_CLIENT_SECRET`,
-  `ZOOM_SMS_SENDER_PHONE_NUMBER`, `ZOOM_SMS_SENDER_USER_ID`, and `ZOOM_SMS_TO`
-- Twilio SMS: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `SMS_TO`, plus either
-  `TWILIO_FROM_NUMBER` or `TWILIO_MESSAGING_SERVICE_SID`
 - Slack: `SLACK_WEBHOOK_URL`
 - Telegram: `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`
-- Telegram: `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`
+- SMTP: `SMTP_HOST`, `SMTP_TO`, and optional SMTP auth settings
+- Twilio SMS: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `SMS_TO`, plus either
+  `TWILIO_FROM_NUMBER` or `TWILIO_MESSAGING_SERVICE_SID`
+- Zoom SMS: `ZOOM_SMS_ACCOUNT_ID`, `ZOOM_SMS_CLIENT_ID`, `ZOOM_SMS_CLIENT_SECRET`,
+  `ZOOM_SMS_SENDER_PHONE_NUMBER`, `ZOOM_SMS_SENDER_USER_ID`, and `ZOOM_SMS_TO`
 
-Zoom SMS requires a Zoom Phone SMS-capable sender and API access to send from
-that sender. If your Zoom app cannot send with server-to-server OAuth, use a
-Zoom user OAuth token or Twilio SMS instead.
+Zoom SMS requires a Zoom Phone SMS-capable sender with server-to-server OAuth.
+If your Zoom app cannot send via API (common on newer Zoom Marketplace apps),
+use Twilio SMS or Telegram as an alternative.
 
 On Vercel, the SQLite de-duplication database is written to `/tmp` because the
 deployed function filesystem is ephemeral.

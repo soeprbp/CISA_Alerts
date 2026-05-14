@@ -3,8 +3,8 @@
 CISA OT / IoT / PLC alert filter.
 
 Polls CISA RSS/XML feeds, filters for industrial/IoT/OT relevance, enriches with
-CISA KEV where CVEs are present, deduplicates via SQLite, and sends alerts by
-console, Slack, and/or SMTP email.
+CISA KEV where CVEs are present, deduplicates via SQLite, and sends alerts to
+console, Microsoft Teams, Slack, Telegram, email (SMTP), Twilio SMS, and Zoom SMS.
 """
 
 from __future__ import annotations
