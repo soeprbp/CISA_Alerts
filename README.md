@@ -16,7 +16,9 @@ This is a small Python alerting service that watches CISA sources and sends aler
 - Optionally enriches CVEs against CISA KEV.
 - Sends alerts to:
   - console
+  - Microsoft Teams webhook
   - email via SMTP
+  - SMS via Zoom Phone or Twilio
   - Slack webhook
 
 ## Install
@@ -39,6 +41,36 @@ For continuous polling:
 ```bash
 python cisa_ot_iot_alerts.py --loop --interval-minutes 60
 ```
+
+## Vercel
+
+This repo also exposes a Flask app for Vercel:
+
+- `GET /` renders the web dashboard.
+- `GET /api/status` returns service/configuration status as JSON.
+- `GET` or `POST /api/run` runs one poll cycle and returns the number of new matching alerts.
+- `POST /run` runs one poll cycle from the dashboard.
+- `vercel.json` schedules `/api/run` hourly in production.
+
+Optional: set `CRON_SECRET` in Vercel. When it is set, `/api/run` requires either an
+`Authorization: Bearer <CRON_SECRET>` header or `?secret=<CRON_SECRET>`.
+
+Delivery channels are configured with environment variables:
+
+- Teams: `TEAMS_WEBHOOK_URL`
+- SMTP: `SMTP_HOST`, `SMTP_TO`, and optional SMTP auth settings
+- Zoom SMS: `ZOOM_SMS_ACCOUNT_ID`, `ZOOM_SMS_CLIENT_ID`, `ZOOM_SMS_CLIENT_SECRET`,
+  `ZOOM_SMS_SENDER_PHONE_NUMBER`, `ZOOM_SMS_SENDER_USER_ID`, and `ZOOM_SMS_TO`
+- Twilio SMS: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `SMS_TO`, plus either
+  `TWILIO_FROM_NUMBER` or `TWILIO_MESSAGING_SERVICE_SID`
+- Slack: `SLACK_WEBHOOK_URL`
+
+Zoom SMS requires a Zoom Phone SMS-capable sender and API access to send from
+that sender. If your Zoom app cannot send with server-to-server OAuth, use a
+Zoom user OAuth token or Twilio SMS instead.
+
+On Vercel, the SQLite de-duplication database is written to `/tmp` because the
+deployed function filesystem is ephemeral.
 
 ## Suggested schedule
 

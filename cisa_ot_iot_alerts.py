@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import email.utils
+import html
 import hashlib
 import os
 import re
@@ -30,7 +31,10 @@ import yaml
 from dotenv import load_dotenv
 
 
-DB_PATH = Path("cisa_alerts_seen.sqlite3")
+DB_PATH = Path(
+    os.getenv("CISA_ALERTS_DB_PATH")
+    or ("/tmp/cisa_alerts_seen.sqlite3" if os.getenv("VERCEL") else "cisa_alerts_seen.sqlite3")
+)
 CONFIG_PATH = Path("config.yaml")
 CVE_RE = re.compile(r"CVE-\d{4}-\d{4,7}", re.IGNORECASE)
 
@@ -45,6 +49,19 @@ class Finding:
     matched_keywords: tuple[str, ...]
     cves: tuple[str, ...]
     kev_matches: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class RunSummary:
+    ran_at_utc: str
+    total_matches: int
+    new_findings: tuple[Finding, ...]
+    seen_findings: tuple[Finding, ...]
+    errors: tuple[str, ...]
+
+    @property
+    def sent_count(self) -> int:
+        return len(self.new_findings)
 
 
 def load_config(path: Path) -> dict:
@@ -194,6 +211,31 @@ def send_slack(finding: Finding) -> None:
     resp.raise_for_status()
 
 
+def send_teams(finding: Finding) -> None:
+    webhook = os.getenv("TEAMS_WEBHOOK_URL", "").strip()
+    if not webhook:
+        return
+
+    text = html.escape(format_finding(finding)).replace("\n", "<br>")
+    payload = {
+        "@type": "MessageCard",
+        "@context": "http://schema.org/extensions",
+        "summary": finding.title,
+        "themeColor": "245B7C",
+        "title": f"CISA OT/IoT Alert: {finding.title}",
+        "text": text,
+        "potentialAction": [
+            {
+                "@type": "OpenUri",
+                "name": "Open advisory",
+                "targets": [{"os": "default", "uri": finding.link}],
+            }
+        ],
+    }
+    resp = requests.post(webhook, json=payload, timeout=30)
+    resp.raise_for_status()
+
+
 def send_email(finding: Finding) -> None:
     host = os.getenv("SMTP_HOST", "").strip()
     if not host:
@@ -226,30 +268,161 @@ def send_email(finding: Finding) -> None:
         smtp.send_message(msg)
 
 
+def split_recipients(value: str) -> list[str]:
+    return [part.strip() for part in re.split(r"[;,]", value) if part.strip()]
+
+
+def sms_body(finding: Finding, max_chars: int = 480) -> str:
+    body = f"CISA OT/IoT alert: {finding.title}\n{finding.link}"
+    if len(body) <= max_chars:
+        return body
+    return f"CISA OT/IoT alert: {finding.title[: max_chars - len(finding.link) - 28]}...\n{finding.link}"
+
+
+def zoom_access_token() -> str:
+    token = os.getenv("ZOOM_SMS_ACCESS_TOKEN", "").strip()
+    if token:
+        return token
+
+    account_id = os.getenv("ZOOM_SMS_ACCOUNT_ID", "").strip()
+    client_id = os.getenv("ZOOM_SMS_CLIENT_ID", "").strip()
+    client_secret = os.getenv("ZOOM_SMS_CLIENT_SECRET", "").strip()
+    if not account_id or not client_id or not client_secret:
+        return ""
+
+    resp = requests.post(
+        "https://zoom.us/oauth/token",
+        params={"grant_type": "account_credentials", "account_id": account_id},
+        auth=(client_id, client_secret),
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json().get("access_token", "")
+
+
+def send_zoom_sms(finding: Finding) -> None:
+    recipients = split_recipients(os.getenv("ZOOM_SMS_TO", ""))
+    sender_phone = os.getenv("ZOOM_SMS_SENDER_PHONE_NUMBER", "").strip()
+    sender_user_id = os.getenv("ZOOM_SMS_SENDER_USER_ID", "").strip()
+    if not recipients or not sender_phone or not sender_user_id:
+        return
+
+    token = zoom_access_token()
+    if not token:
+        print("[WARN] Zoom SMS configured but no access token settings are available; skipping Zoom SMS", file=sys.stderr)
+        return
+
+    payload = {
+        "sender": {
+            "phone_number": sender_phone,
+            "user_id": sender_user_id,
+        },
+        "to_members": [{"phone_number": recipient} for recipient in recipients],
+        "message": sms_body(finding),
+    }
+    resp = requests.post(
+        "https://api.zoom.us/v2/phone/sms/messages",
+        headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+        json=payload,
+        timeout=30,
+    )
+    resp.raise_for_status()
+
+
+def send_sms(finding: Finding) -> None:
+    account_sid = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
+    auth_token = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
+    recipients = split_recipients(os.getenv("SMS_TO", ""))
+    if not account_sid or not auth_token or not recipients:
+        return
+
+    from_number = os.getenv("TWILIO_FROM_NUMBER", "").strip()
+    messaging_service_sid = os.getenv("TWILIO_MESSAGING_SERVICE_SID", "").strip()
+    if not from_number and not messaging_service_sid:
+        print("[WARN] Twilio SMS configured but no sender number or messaging service set; skipping SMS", file=sys.stderr)
+        return
+
+    body = sms_body(finding)
+    url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
+
+    for recipient in recipients:
+        data = {"To": recipient, "Body": body}
+        if messaging_service_sid:
+            data["MessagingServiceSid"] = messaging_service_sid
+        else:
+            data["From"] = from_number
+
+        resp = requests.post(url, data=data, auth=(account_sid, auth_token), timeout=30)
+        resp.raise_for_status()
+
+
 def alert(finding: Finding) -> None:
     print("=" * 88)
     print(format_finding(finding))
     print()
-    send_slack(finding)
-    send_email(finding)
+    delivery_errors: list[str] = []
+    for channel, sender in (
+        ("Slack", send_slack),
+        ("Teams", send_teams),
+        ("SMTP", send_email),
+        ("Zoom SMS", send_zoom_sms),
+        ("Twilio SMS", send_sms),
+    ):
+        try:
+            sender(finding)
+        except Exception as exc:
+            delivery_errors.append(f"{channel}: {exc}")
+
+    if delivery_errors:
+        raise RuntimeError("; ".join(delivery_errors))
+
+
+def run_poll(config: dict, *, send_alerts: bool = True, update_seen: bool = True) -> RunSummary:
+    conn = db_connect()
+    kev = fetch_kev(config.get("kev_json_url", ""))
+    new_findings: list[Finding] = []
+    seen_findings: list[Finding] = []
+    errors: list[str] = []
+    total_matches = 0
+
+    for feed in config.get("feeds", []):
+        try:
+            findings = poll_feed(feed, config, kev)
+        except Exception as exc:
+            errors.append(f"{feed.get('name', 'Unknown feed')}: {exc}")
+            continue
+
+        for finding in findings:
+            total_matches += 1
+            if already_seen(conn, finding):
+                seen_findings.append(finding)
+                continue
+
+            try:
+                if send_alerts:
+                    alert(finding)
+                if update_seen:
+                    mark_seen(conn, finding)
+                new_findings.append(finding)
+            except Exception as exc:
+                errors.append(f"{finding.title}: {exc}")
+
+    summary = RunSummary(
+        ran_at_utc=datetime.now(timezone.utc).isoformat(),
+        total_matches=total_matches,
+        new_findings=tuple(new_findings),
+        seen_findings=tuple(seen_findings),
+        errors=tuple(errors),
+    )
+
+    print(f"[OK] New matching alerts sent: {summary.sent_count}")
+    for error in summary.errors:
+        print(f"[ERROR] {error}", file=sys.stderr)
+    return summary
 
 
 def run_once(config: dict) -> int:
-    conn = db_connect()
-    kev = fetch_kev(config.get("kev_json_url", ""))
-    sent = 0
-
-    for feed in config.get("feeds", []):
-        findings = poll_feed(feed, config, kev)
-        for finding in findings:
-            if already_seen(conn, finding):
-                continue
-            alert(finding)
-            mark_seen(conn, finding)
-            sent += 1
-
-    print(f"[OK] New matching alerts sent: {sent}")
-    return sent
+    return run_poll(config).sent_count
 
 
 def main() -> int:
