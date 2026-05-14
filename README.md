@@ -66,6 +66,8 @@ Delivery channels are configured with environment variables:
 - Twilio SMS: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `SMS_TO`, plus either
   `TWILIO_FROM_NUMBER` or `TWILIO_MESSAGING_SERVICE_SID`
 - Slack: `SLACK_WEBHOOK_URL`
+- Telegram: `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`
+- Telegram: `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`
 
 Zoom SMS requires a Zoom Phone SMS-capable sender and API access to send from
 that sender. If your Zoom app cannot send with server-to-server OAuth, use a

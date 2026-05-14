@@ -485,6 +485,10 @@ def _channels() -> list[dict]:
         {"name": "Microsoft Teams", "enabled": bool(os.getenv("TEAMS_WEBHOOK_URL", "").strip())},
         {"name": "Slack", "enabled": bool(os.getenv("SLACK_WEBHOOK_URL", "").strip())},
         {
+            "name": "Telegram",
+            "enabled": bool(os.getenv("TELEGRAM_BOT_TOKEN", "").strip() and os.getenv("TELEGRAM_CHAT_ID", "").strip()),
+        },
+        {
             "name": "SMTP",
             "enabled": bool(os.getenv("SMTP_HOST", "").strip() and os.getenv("SMTP_TO", "").strip()),
         },

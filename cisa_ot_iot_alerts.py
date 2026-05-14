@@ -356,6 +356,29 @@ def send_sms(finding: Finding) -> None:
         resp.raise_for_status()
 
 
+def send_telegram(finding: Finding) -> None:
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+    if not bot_token or not chat_id:
+        return
+
+    text = (
+        f"<b>CISA OT/IoT Alert</b>\n"
+        f"<b>{finding.title}</b>\n"
+        f"Source: {finding.source}\n"
+        f"Published: {finding.published}\n"
+        f"Matched: {', '.join(finding.matched_keywords)}\n"
+        f"{'CVEs: ' + ', '.join(finding.cves) if finding.cves else ''}\n"
+        f"Link: {finding.link}"
+    )
+    resp = requests.post(
+        f"https://api.telegram.org/bot{bot_token}/sendMessage",
+        json={"chat_id": chat_id, "text": text, "parse_mode": "HTML", "disable_web_page_preview": True},
+        timeout=30,
+    )
+    resp.raise_for_status()
+
+
 def alert(finding: Finding) -> None:
     print("=" * 88)
     print(format_finding(finding))
@@ -365,6 +388,7 @@ def alert(finding: Finding) -> None:
         ("Slack", send_slack),
         ("Teams", send_teams),
         ("SMTP", send_email),
+        ("Telegram", send_telegram),
         ("Zoom SMS", send_zoom_sms),
         ("Twilio SMS", send_sms),
     ):
